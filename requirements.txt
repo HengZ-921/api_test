@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+torch>=2.4.1
+transformers>=4.46.3
+safetensors
+
