@@ -1,29 +1,29 @@
 # deepseek_api.py
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-
-class GenerateRequest(BaseModel):
-    prompt: str
-    max_new_tokens: int = 200
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 app = FastAPI()
+df = pd.read_csv(
+    "https://saturn-public-data.s3.us-east-2.amazonaws.com/examples/dashboard/housePriceData.csv"
+)
+lr = LinearRegression()
+lr.fit(df[["BedroomAbvGr", "YearBuilt"]], df["SalePrice"])
 
-@app.on_event("startup")
-async def load_model():
-    global tokenizer, model, device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
-                                              trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
-                                                 trust_remote_code=True,
-                                                 device_map="auto").to(device)
+@app.get("/")
+async def docs_redirect():
+    return Response("Opening the docs UI", status_code=302, headers={"location": "/docs"})
 
-@app.post("/generate")
-async def generate(req: GenerateRequest):
-    inputs = tokenizer(req.prompt, return_tensors="pt").to(device)
-    out = model.generate(**inputs, max_new_tokens=req.max_new_tokens)
-    text = tokenizer.decode(out[0], skip_special_tokens=True)
-    return {"generated_text": text}
+@app.get("/predict")
+async def predict(BedroomAbvGr: int = None, YearBuilt: int = None):
+    a = pd.DataFrame([[BedroomAbvGr, YearBuilt]], columns=["BedroomAbvGr", "YearBuilt"])
+    v = lr.predict(a)
+    if not ((0 <= BedroomAbvGr <= 8) and (1872 <= YearBuilt <= 2100)):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter BedroomAbvGr between 0 and 8. Enter YearBuilt between 1872 and 2100",
+        )
+
+    return {"prediction": v[0]}
 
