@@ -2,6 +2,7 @@
 from fastapi import FastAPI, HTTPException
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from fastapi.responses import Response
 
 app = FastAPI()
 df = pd.read_csv(
